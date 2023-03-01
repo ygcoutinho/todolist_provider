@@ -2,6 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 // ignore: depend_on_referenced_packages
 import 'package:synchronized/synchronized.dart';
+import 'package:todolist_provider/app/core/database/sqlite_migration_factory.dart';
 
 class SqliteConnectionFactory {
   static const _dbName = 'todo_list_database';
@@ -45,7 +46,26 @@ class SqliteConnectionFactory {
     await db.execute('PRAGMA foreign_keys = ON');
   }
 
-  Future<void> _onCreate(Database db, int version) async {}
-  Future<void> _onUpgrade(Database db, int oldVersion, int version) async {}
+  Future<void> _onCreate(Database db, int version) async {
+    final batch = db.batch();
+    final migrations = SqliteMigrationFactory().getCreateMigrations();
+
+    for (var migration in migrations) {
+      migration.create(batch);
+    }
+
+    batch.commit();
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int version) async {
+    final batch = db.batch();
+    final migrations = SqliteMigrationFactory().getUpgradeMigration(oldVersion);
+
+    for (var migration in migrations) {
+      migration.upgrade(batch);
+    }
+    batch.commit();
+  }
+
   Future<void> _onDowngrade(Database db, int oldVersion, int version) async {}
 }
